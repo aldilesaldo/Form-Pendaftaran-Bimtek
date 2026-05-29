@@ -506,7 +506,16 @@ export const dbService = {
     const raw = localStorage.getItem(LS_KEYS.REGISTRATIONS);
     if (raw) {
       try {
-        return JSON.parse(raw);
+        const list = JSON.parse(raw) as Registration[];
+        const uniqueList: Registration[] = [];
+        const seenIds = new Set<string>();
+        list.forEach((item) => {
+          if (item && item.id && !seenIds.has(item.id)) {
+            seenIds.add(item.id);
+            uniqueList.push(item);
+          }
+        });
+        return uniqueList;
       } catch {
         return [];
       }
@@ -523,8 +532,16 @@ export const dbService = {
         colSnap.forEach((docSnap) => {
           data.push(docSnap.data() as Registration);
         });
-        // Sort newest first
-        return data.sort((a, b) => new Date(b.registeredAt).getTime() - new Date(a.registeredAt).getTime());
+        // Deduplicate and sort newest first
+        const uniqueData: Registration[] = [];
+        const seenIds = new Set<string>();
+        data.forEach((item) => {
+          if (item && item.id && !seenIds.has(item.id)) {
+            seenIds.add(item.id);
+            uniqueData.push(item);
+          }
+        });
+        return uniqueData.sort((a, b) => new Date(b.registeredAt).getTime() - new Date(a.registeredAt).getTime());
       } catch (error) {
         try {
           return handleFirestoreError(error, OperationType.LIST, path);
@@ -580,7 +597,16 @@ export const dbService = {
     const raw = localStorage.getItem(LS_KEYS.ATTENDANCE);
     if (raw) {
       try {
-        return JSON.parse(raw);
+        const list = JSON.parse(raw) as Attendance[];
+        const uniqueList: Attendance[] = [];
+        const seenIds = new Set<string>();
+        list.forEach((item) => {
+          if (item && item.id && !seenIds.has(item.id)) {
+            seenIds.add(item.id);
+            uniqueList.push(item);
+          }
+        });
+        return uniqueList;
       } catch {
         return [];
       }
@@ -597,7 +623,16 @@ export const dbService = {
         colSnap.forEach((docSnap) => {
           data.push(docSnap.data() as Attendance);
         });
-        return data.sort((a, b) => new Date(b.attendedAt).getTime() - new Date(a.attendedAt).getTime());
+        // Deduplicate and sort
+        const uniqueData: Attendance[] = [];
+        const seenIds = new Set<string>();
+        data.forEach((item) => {
+          if (item && item.id && !seenIds.has(item.id)) {
+            seenIds.add(item.id);
+            uniqueData.push(item);
+          }
+        });
+        return uniqueData.sort((a, b) => new Date(b.attendedAt).getTime() - new Date(a.attendedAt).getTime());
       } catch (error) {
         try {
           return handleFirestoreError(error, OperationType.LIST, path);

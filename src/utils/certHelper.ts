@@ -100,12 +100,18 @@ export const generateCertificateImage = (data: CertificateData): Promise<string>
       targetCtx.font = `bold ${nameSize}px "Times New Roman", "Playfair Display", "Georgia", "Inter", sans-serif`;
       targetCtx.fillStyle = nameColor;
       
+      // Set text alignment to left as requested by user
+      targetCtx.textAlign = "left";
+      
       // Transparent shadow for exclusive aesthetic depth
       targetCtx.shadowColor = "rgba(0, 0, 0, 0.12)";
       targetCtx.shadowBlur = 3;
       targetCtx.shadowOffsetX = 1;
       targetCtx.shadowOffsetY = 1;
       targetCtx.fillText(data.participantName.toUpperCase(), nameX, nameY);
+      
+      // Reset text alignment and shadow
+      targetCtx.textAlign = "center";
       targetCtx.shadowColor = "transparent";
       targetCtx.shadowBlur = 0;
       targetCtx.shadowOffsetX = 0;

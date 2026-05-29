@@ -284,7 +284,7 @@ export const AttendanceForm: React.FC<AttendanceFormProps> = ({
                   const dayNum = idx + 2;
                   return (
                     <button
-                      key={dayNum}
+                      key={`att-day-btn-${dayNum}`}
                       type="button"
                       onClick={() => setSelectedDay(dayNum)}
                       className={`py-2 px-1 rounded-lg text-xs font-bold border transition-all ${

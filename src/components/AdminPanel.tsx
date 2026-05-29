@@ -1470,7 +1470,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
                         <th className="p-2 border border-black text-center font-bold">Jenis Kelamin</th>
                         {/* Dynamic columns for Day 1 to Day durationDays */}
                         {Array.from({ length: settings.durationDays || 3 }).map((_, i) => (
-                          <th key={i} className="p-2 border border-black text-center w-32">
+                          <th key={`th-duration-day-${i}`} className="p-2 border border-black text-center w-32">
                             Hari {i + 1}
                             <span className="block text-[8px] font-normal leading-tight font-mono">
                               ({formatIndonesianDate(settings.startDate || "2026-05-21", i)})
@@ -1507,7 +1507,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
                                 );
 
                                 return (
-                                  <td key={i} className="p-1 border border-black h-16 text-center relative align-middle w-32 bg-white">
+                                  <td key={`presence-day-cell-${reg.id || idx}-${i}`} className="p-1 border border-black h-16 text-center relative align-middle w-32 bg-white">
                                     {attMatch ? (
                                       <div className="flex flex-col items-center justify-center h-full">
                                         {attMatch.signatureBase64 ? (
@@ -2994,13 +2994,13 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
                         // Completely hide the "default" sample session as the user wants to input themselves
                         return ev.id !== "default";
                       })
-                      .map((ev) => {
+                      .map((ev, evIdx) => {
                         const isActive = 
                           (settings.originalEventId && ev.id === settings.originalEventId) ||
                           (!settings.originalEventId && ev.eventTitle === settings.eventTitle);
                         return (
                         <div
-                          key={ev.id}
+                          key={`ev-item-${ev.id || ""}-${evIdx}`}
                           className={`p-4 rounded-2xl border transition-all flex flex-col justify-between ${
                             isActive
                               ? "bg-emerald-950/20 border-emerald-500/60 shadow-lg shadow-emerald-500/5 text-slate-100"
