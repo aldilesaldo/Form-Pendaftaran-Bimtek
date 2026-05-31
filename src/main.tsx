@@ -2,6 +2,7 @@ import {StrictMode} from 'react';
 import {createRoot} from 'react-dom/client';
 import App from './App.tsx';
 import './index.css';
+import { safeStorage } from './utils/safeStorage.ts';
 
 // Intercept and handle Firestore quota/resource-exhausted errors cleanly to prevent console spam & platform error flags
 const originalConsoleError = console.error;
@@ -34,8 +35,8 @@ console.error = function (...args: any[]) {
 
   if (isQuotaError(message)) {
     try {
-      if (localStorage.getItem("firestore_quota_exceeded") !== "true") {
-        localStorage.setItem("firestore_quota_exceeded", "true");
+      if (safeStorage.getItem("firestore_quota_exceeded") !== "true") {
+        safeStorage.setItem("firestore_quota_exceeded", "true");
         setTimeout(() => {
           window.location.reload();
         }, 300);
@@ -58,8 +59,8 @@ console.warn = function (...args: any[]) {
 
   if (isQuotaError(message)) {
     try {
-      if (localStorage.getItem("firestore_quota_exceeded") !== "true") {
-        localStorage.setItem("firestore_quota_exceeded", "true");
+      if (safeStorage.getItem("firestore_quota_exceeded") !== "true") {
+        safeStorage.setItem("firestore_quota_exceeded", "true");
         setTimeout(() => {
           window.location.reload();
         }, 300);
@@ -79,8 +80,8 @@ window.addEventListener("unhandledrejection", (event) => {
   if (isQuotaError(errMsg)) {
     event.preventDefault(); // Prevent logging to stdout/stderr
     try {
-      if (localStorage.getItem("firestore_quota_exceeded") !== "true") {
-        localStorage.setItem("firestore_quota_exceeded", "true");
+      if (safeStorage.getItem("firestore_quota_exceeded") !== "true") {
+        safeStorage.setItem("firestore_quota_exceeded", "true");
         setTimeout(() => {
           window.location.reload();
         }, 300);
@@ -96,8 +97,8 @@ window.addEventListener("error", (event) => {
   if (isQuotaError(errMsg)) {
     event.preventDefault(); // Prevent logging
     try {
-      if (localStorage.getItem("firestore_quota_exceeded") !== "true") {
-        localStorage.setItem("firestore_quota_exceeded", "true");
+      if (safeStorage.getItem("firestore_quota_exceeded") !== "true") {
+        safeStorage.setItem("firestore_quota_exceeded", "true");
         setTimeout(() => {
           window.location.reload();
         }, 300);
