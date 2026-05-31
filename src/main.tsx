@@ -11,12 +11,16 @@ const isQuotaError = (message: string) => {
   if (!message) return false;
   const lowercaseMsg = String(message).toLowerCase();
   return (
-    lowercaseMsg.includes("@firebase/firestore") ||
     lowercaseMsg.includes("quota limit exceeded") ||
     lowercaseMsg.includes("resource-exhausted") ||
     lowercaseMsg.includes("free daily write units") ||
     lowercaseMsg.includes("maximum backoff delay") ||
-    lowercaseMsg.includes("quota exceeded")
+    lowercaseMsg.includes("quota exceeded") ||
+    (lowercaseMsg.includes("@firebase/firestore") && (
+      lowercaseMsg.includes("quota") ||
+      lowercaseMsg.includes("exhausted") ||
+      lowercaseMsg.includes("limit")
+    ))
   );
 };
 

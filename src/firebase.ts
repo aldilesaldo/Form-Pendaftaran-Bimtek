@@ -13,8 +13,7 @@ try {
   if (
     firebaseConfig.apiKey &&
     !firebaseConfig.apiKey.includes("INITIAL_MOCK_KEY_REPLACE_ME") &&
-    firebaseConfig.apiKey !== "MOCK_KEY" &&
-    localStorage.getItem("firestore_quota_exceeded") !== "true"
+    firebaseConfig.apiKey !== "MOCK_KEY"
   ) {
     app = initializeApp(firebaseConfig);
     db = getFirestore(app, firebaseConfig.firestoreDatabaseId || "(default)");

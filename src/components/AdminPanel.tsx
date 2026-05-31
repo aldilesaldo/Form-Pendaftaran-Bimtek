@@ -360,6 +360,15 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
   const [showAddEventForm, setShowAddEventForm] = useState(false);
   const [eventActionStatus, setEventActionStatus] = useState("");
   
+  // Backup & Import states
+  const [isExporting, setIsExporting] = useState(false);
+  const [exportSuccess, setExportSuccess] = useState("");
+  const [exportError, setExportError] = useState("");
+  const [isImporting, setIsImporting] = useState(false);
+  const [importSuccess, setImportSuccess] = useState("");
+  const [importError, setImportError] = useState("");
+  const [importProgress, setImportProgress] = useState<{current: number; total: number; phase: string} | null>(null);
+  
   // Exit Confirmation state
   const [showExitConfirm, setShowExitConfirm] = useState(false);
 
@@ -384,6 +393,147 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
     } catch (err) {
       console.error("Gagal memuat daftar Bimtek", err);
     }
+  };
+
+  const handleExportDatabase = async () => {
+    try {
+      setIsExporting(true);
+      setExportError("");
+      setExportSuccess("");
+      
+      const [events, registrations, attendance] = await Promise.all([
+        dbService.getAllBimtekEvents(),
+        dbService.getRegistrations(),
+        dbService.getAttendanceList()
+      ]);
+
+      const backupData = {
+        isBimtekBackup: true,
+        exportedAt: new Date().toISOString(),
+        appName: "Bimtek Sumatra Barat Database Backup",
+        events,
+        registrations,
+        attendance
+      };
+
+      const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(backupData, null, 2));
+      const downloadAnchor = document.createElement('a');
+      
+      const eventSlug = settings.eventTitle ? settings.eventTitle.substring(0, 20).replace(/[^a-z0-9]/gi, '_').toLowerCase() : "bimtek";
+      const dateStr = new Date().toISOString().split('T')[0];
+      
+      downloadAnchor.setAttribute("href", dataStr);
+      downloadAnchor.setAttribute("download", `backup_database_bimtek_${eventSlug}_${dateStr}.json`);
+      document.body.appendChild(downloadAnchor);
+      downloadAnchor.click();
+      downloadAnchor.remove();
+
+      setExportSuccess("Database Berhasil Diekspor! Berkas backup .json telah diunduh.");
+      setTimeout(() => setExportSuccess(""), 5000);
+    } catch (err: any) {
+      console.error("Failed to export database:", err);
+      setExportError("Gagal mengekspor database: " + (err.message || String(err)));
+    } finally {
+      setIsExporting(false);
+    }
+  };
+
+  const handleImportDatabase = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setIsImporting(true);
+    setImportError("");
+    setImportSuccess("");
+    setImportProgress({ current: 0, total: 0, phase: "Membaca berkas..." });
+
+    const reader = new FileReader();
+    reader.onload = async (event) => {
+      try {
+        const fileContent = event.target?.result as string;
+        const backupData = JSON.parse(fileContent);
+
+        if (!backupData || backupData.isBimtekBackup !== true) {
+          throw new Error("Berkas JSON bukan merupakan format backup database Bimtek Sumatra Barat yang valid.");
+        }
+
+        const importedEvents = Array.isArray(backupData.events) ? backupData.events : [];
+        const importedRegs = Array.isArray(backupData.registrations) ? backupData.registrations : [];
+        const importedAtts = Array.isArray(backupData.attendance) ? backupData.attendance : [];
+
+        const totalItems = importedEvents.length + importedRegs.length + importedAtts.length;
+        if (totalItems === 0) {
+          throw new Error("Tidak ada data yang ditemukan dalam berkas backup ini.");
+        }
+
+        setImportProgress({ current: 0, total: totalItems, phase: "Memulai impor data..." });
+
+        let count = 0;
+
+        // 1. Import Events/Settings
+        if (importedEvents.length > 0) {
+          setImportProgress({ current: count, total: totalItems, phase: `Mengimpor Sesi Bimtek (0/${importedEvents.length})...` });
+          for (const ev of importedEvents) {
+            if (ev && ev.id) {
+              await dbService.addBimtekEvent(ev);
+              count++;
+              setImportProgress({ current: count, total: totalItems, phase: `Mengimpor Sesi Bimtek (${count}/${totalItems})...` });
+            }
+          }
+        }
+
+        // 2. Import Registrations
+        if (importedRegs.length > 0) {
+          setImportProgress({ current: count, total: totalItems, phase: `Mengimpor Peserta Terdaftar (${count}/${totalItems})...` });
+          for (const reg of importedRegs) {
+            if (reg && reg.id) {
+              await dbService.addRegistration(reg);
+              count++;
+              setImportProgress({ current: count, total: totalItems, phase: `Mengimpor Peserta Terdaftar (${count}/${totalItems})...` });
+            }
+          }
+        }
+
+        // 3. Import Attendance
+        if (importedAtts.length > 0) {
+          setImportProgress({ current: count, total: totalItems, phase: `Mengimpor Data Kehadiran (${count}/${totalItems})...` });
+          for (const att of importedAtts) {
+            if (att && att.id) {
+              await dbService.addAttendance(att);
+              count++;
+              setImportProgress({ current: count, total: totalItems, phase: `Mengimpor Data Kehadiran (${count}/${totalItems})...` });
+            }
+          }
+        }
+
+        // Reset file value
+        if (e.target) {
+          e.target.value = "";
+        }
+
+        setImportSuccess(`Sukses! Berhasil mengimpor ${importedEvents.length} sesi Bimtek, ${importedRegs.length} peserta, dan ${importedAtts.length} rekaman presensi.`);
+        setImportProgress(null);
+
+        setTimeout(() => {
+          window.location.reload();
+        }, 3500);
+
+      } catch (err: any) {
+        console.error("Failed to import database:", err);
+        setImportError("Gagal mengimpor database: " + (err.message || String(err)));
+        setImportProgress(null);
+      } finally {
+        setIsImporting(false);
+      }
+    };
+
+    reader.onerror = () => {
+      setImportError("Gagal membaca berkas JSON.");
+      setIsImporting(false);
+      setImportProgress(null);
+    };
+
+    reader.readAsText(file);
   };
 
   useEffect(() => {
@@ -3456,6 +3606,117 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
                     <span>Simpan Konfigurasi Bimtek</span>
                   </button>
                 </form>
+                </div>
+
+                {/* Export & Import Section */}
+                <div id="export-import-section" className="max-w-xl bg-slate-800/20 border border-slate-700/35 p-6 rounded-2xl animate-fade-in space-y-5 text-slate-200 shadow-md">
+                  <div className="flex items-start space-x-3">
+                    <Database className="w-5 h-5 text-emerald-400 mt-0.5 shrink-0" />
+                    <div>
+                      <h4 className="text-sm font-bold text-white uppercase tracking-wider">
+                        Ekspor & Impor Database (Backup Bimtek)
+                      </h4>
+                      <p className="text-xs text-slate-400 mt-1.5 leading-relaxed">
+                        Anda dapat mengekspor seluruh basis data (meliputi seluruh sesi Bimtek, biodata lengkap peserta terdaftar, tanda tangan digital, serta seluruh presensi harian) menjadi satu berkas JSON lengkap berkualitas tinggi dan memulihkannya kembali kapan saja.
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2">
+                    {/* Export Action */}
+                    <div className="space-y-3 p-4 rounded-xl bg-slate-900/40 border border-white/5">
+                      <h5 className="text-xs font-bold text-emerald-400 uppercase tracking-widest">Cadangkan Basis Data</h5>
+                      <p className="text-[11px] text-slate-400 leading-normal">
+                        Unduh salinan penuh seluruh data bimtek saat ini ke dalam format berkas <strong>.json</strong> khusus.
+                      </p>
+                      <button
+                        type="button"
+                        onClick={handleExportDatabase}
+                        disabled={isExporting}
+                        className="w-full py-2.5 px-4 rounded-xl bg-slate-800 hover:bg-slate-700 disabled:opacity-50 active:scale-[0.98] border border-white/10 text-white font-bold transition-all text-xs flex items-center justify-center space-x-2 shadow cursor-pointer shadow-black/40"
+                      >
+                        {isExporting ? (
+                          <>
+                            <span className="w-3.5 h-3.5 border-2 border-slate-400 border-t-white rounded-full animate-spin"></span>
+                            <span>Mengekspor...</span>
+                          </>
+                        ) : (
+                          <>
+                            <Download className="w-4 h-4 text-emerald-400" />
+                            <span>Ekspor Database (.json)</span>
+                          </>
+                        )}
+                      </button>
+                    </div>
+
+                    {/* Import Action */}
+                    <div className="space-y-3 p-4 rounded-xl bg-slate-900/40 border border-white/5 relative">
+                      <h5 className="text-xs font-bold text-indigo-400 uppercase tracking-widest">Pulihkan Sesi Bimtek</h5>
+                      <p className="text-[11px] text-slate-400 leading-normal">
+                        Unggah berkas JSON cadangan yang telah diekspor sebelumnya untuk mengembalikan database.
+                      </p>
+                      
+                      <label className="w-full py-2.5 px-4 rounded-xl bg-indigo-600/95 hover:bg-indigo-550 active:scale-[0.98] text-white font-bold transition-all text-xs flex items-center justify-center space-x-2 shadow cursor-pointer text-center shadow-black/40">
+                        <Upload className="w-4 h-4" />
+                        <span>{isImporting ? "Mengimpor..." : "Unggah & Impor (.json)"}</span>
+                        <input
+                          type="file"
+                          accept=".json"
+                          onChange={handleImportDatabase}
+                          disabled={isImporting}
+                          className="hidden"
+                        />
+                      </label>
+                    </div>
+                  </div>
+
+                  {/* Progress overlay/indicator */}
+                  {importProgress && (
+                    <div className="bg-slate-900/90 border border-indigo-500/20 p-4 rounded-xl space-y-2 animate-pulse mt-2">
+                      <div className="flex justify-between text-xs text-indigo-300 font-bold">
+                        <span>{importProgress.phase}</span>
+                        <span>{importProgress.current} / {importProgress.total}</span>
+                      </div>
+                      <div className="w-full bg-slate-800 rounded-full h-2 overflow-hidden">
+                        <div 
+                          className="bg-indigo-500 h-full rounded-full transition-all duration-300"
+                          style={{ width: `${(importProgress.current / importProgress.total) * 100}%` }}
+                        ></div>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Operational status responses */}
+                  {exportSuccess && (
+                    <div className="text-xs p-3 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 font-semibold animate-fade-in flex items-center gap-2">
+                      <CheckCircle className="w-4 h-4 shrink-0" />
+                      <span>{exportSuccess}</span>
+                    </div>
+                  )}
+
+                  {exportError && (
+                    <div className="text-xs p-3 rounded-xl bg-red-500/10 border border-red-500/20 text-red-400 font-semibold animate-fade-in">
+                      {exportError}
+                    </div>
+                  )}
+
+                  {importSuccess && (
+                     <div className="text-xs p-3 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 font-bold animate-pulse flex items-center gap-2">
+                      <CheckCircle className="w-4 h-4 shrink-0" />
+                      <div>
+                        <p>{importSuccess}</p>
+                        <p className="text-[10px] text-slate-400 font-normal mt-1 italic">
+                          Aplikasi akan disegarkan dalam 3 detik untuk memuat ulang data...
+                        </p>
+                      </div>
+                     </div>
+                  )}
+
+                  {importError && (
+                    <div className="text-xs p-3 rounded-xl bg-red-500/10 border border-red-500/20 text-red-400 font-semibold animate-fade-in">
+                      {importError}
+                    </div>
+                  )}
                 </div>
 
                 {/* Reset Data Section */}
