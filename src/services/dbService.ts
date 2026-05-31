@@ -10,8 +10,9 @@ import {
   onSnapshot
 } from "firebase/firestore";
 import { db, isFirebaseConfigured } from "../firebase";
+import { safeStorage } from "../utils/safeStorage";
 
-let isQuotaExceededCached = localStorage.getItem("firestore_quota_exceeded") === "true";
+let isQuotaExceededCached = safeStorage.getItem("firestore_quota_exceeded") === "true";
 
 // Self-healing check: if we are cached, test the connection in the background to automatically recover
 if (isQuotaExceededCached && isFirebaseConfigured && db) {
@@ -20,7 +21,7 @@ if (isQuotaExceededCached && isFirebaseConfigured && db) {
       const docRef = doc(db, "settings", "default");
       await getDoc(docRef);
       // Connection works! Recovery!
-      localStorage.removeItem("firestore_quota_exceeded");
+      safeStorage.removeItem("firestore_quota_exceeded");
       isQuotaExceededCached = false;
       console.log("☀️ Firestore connection recovered! Switching back to real-time online mode.");
       window.location.reload();
@@ -33,9 +34,9 @@ if (isQuotaExceededCached && isFirebaseConfigured && db) {
 export function forceSetOfflineMode(offline: boolean) {
   isQuotaExceededCached = offline;
   if (offline) {
-    localStorage.setItem("firestore_quota_exceeded", "true");
+    safeStorage.setItem("firestore_quota_exceeded", "true");
   } else {
-    localStorage.removeItem("firestore_quota_exceeded");
+    safeStorage.removeItem("firestore_quota_exceeded");
   }
 }
 
@@ -52,7 +53,7 @@ function checkAndTriggerQuotaFallback(error: any) {
   ) {
     if (!isQuotaExceededCached) {
       isQuotaExceededCached = true;
-      localStorage.setItem("firestore_quota_exceeded", "true");
+      safeStorage.setItem("firestore_quota_exceeded", "true");
       console.warn("⚠️ Firestore quota units exhausted. Automatically falling back to Resilient Local Offline Mode.");
       setTimeout(() => {
         window.location.reload();
@@ -252,7 +253,7 @@ const DEFAULT_SETTINGS: AppSettings = {
 };
 
 export function getDynamicDefaultSettings(): AppSettings {
-  const localDefault = localStorage.getItem("bimtek_persistent_custom_defaults");
+  const localDefault = safeStorage.getItem("bimtek_persistent_custom_defaults");
   if (localDefault) {
     try {
       const parsedDef = JSON.parse(localDefault);
@@ -281,7 +282,7 @@ export const dbService = {
       // Sync defaults doc in background
       getDoc(doc(db, "settings", "persistent_defaults")).then((defSnap) => {
         if (defSnap.exists()) {
-          localStorage.setItem("bimtek_persistent_custom_defaults", JSON.stringify(defSnap.data()));
+          safeStorage.setItem("bimtek_persistent_custom_defaults", JSON.stringify(defSnap.data()));
         }
       }).catch((err) => console.warn("Failed syncing dynamic default settings:", err));
 
@@ -326,7 +327,7 @@ export const dbService = {
           const sorted = data.sort((a, b) => new Date(b.registeredAt).getTime() - new Date(a.registeredAt).getTime());
           
           // Sync live data to local cache to ensure exact consistency (important for deleted records)
-          localStorage.setItem(LS_KEYS.REGISTRATIONS, JSON.stringify(sorted));
+          safeStorage.setItem(LS_KEYS.REGISTRATIONS, JSON.stringify(sorted));
           
           callback(sorted);
         }, (error) => {
@@ -359,7 +360,7 @@ export const dbService = {
           const sorted = data.sort((a, b) => new Date(b.attendedAt).getTime() - new Date(a.attendedAt).getTime());
           
           // Sync live data to local cache
-          localStorage.setItem(LS_KEYS.ATTENDANCE, JSON.stringify(sorted));
+          safeStorage.setItem(LS_KEYS.ATTENDANCE, JSON.stringify(sorted));
           
           callback(sorted);
         }, (error) => {
@@ -389,7 +390,7 @@ export const dbService = {
           const defDocRef = doc(db, "settings", "persistent_defaults");
           const defSnap = await getDoc(defDocRef);
           if (defSnap.exists()) {
-            localStorage.setItem("bimtek_persistent_custom_defaults", JSON.stringify(defSnap.data()));
+            safeStorage.setItem("bimtek_persistent_custom_defaults", JSON.stringify(defSnap.data()));
           }
         } catch (e) {
           console.warn("Could not sync persistent background defaults:", e);
@@ -419,7 +420,7 @@ export const dbService = {
   },
 
   getLocalSettings(): AppSettings {
-    const raw = localStorage.getItem(LS_KEYS.SETTINGS);
+    const raw = safeStorage.getItem(LS_KEYS.SETTINGS);
     if (raw) {
       try {
         return JSON.parse(raw);
@@ -428,7 +429,7 @@ export const dbService = {
       }
     }
     const initialSet = getDynamicDefaultSettings();
-    localStorage.setItem(LS_KEYS.SETTINGS, JSON.stringify(initialSet));
+    safeStorage.setItem(LS_KEYS.SETTINGS, JSON.stringify(initialSet));
     return initialSet;
   },
 
@@ -456,7 +457,7 @@ export const dbService = {
       isCertQrEnabled: settings.isCertQrEnabled !== false,
     };
 
-    localStorage.setItem("bimtek_persistent_custom_defaults", JSON.stringify(customDefaults));
+    safeStorage.setItem("bimtek_persistent_custom_defaults", JSON.stringify(customDefaults));
 
     if (isFirestoreActive()) {
       const path = "settings/default";
@@ -471,10 +472,10 @@ export const dbService = {
         handleFirestoreError(error, OperationType.WRITE, path);
       }
     } else {
-      localStorage.setItem(LS_KEYS.SETTINGS, JSON.stringify(settings));
+      safeStorage.setItem(LS_KEYS.SETTINGS, JSON.stringify(settings));
     }
     // Also save locally as redundancy/cache
-    localStorage.setItem(LS_KEYS.SETTINGS, JSON.stringify(settings));
+    safeStorage.setItem(LS_KEYS.SETTINGS, JSON.stringify(settings));
   },
 
   // REGISTRATIONS
@@ -493,7 +494,7 @@ export const dbService = {
     // Always store or cache in localStorage for instant retrieval / offline resilient flow
     const existing = this.getLocalRegistrations();
     const updated = [reg, ...existing.filter((item) => item.id !== reg.id)];
-    localStorage.setItem(LS_KEYS.REGISTRATIONS, JSON.stringify(updated));
+    safeStorage.setItem(LS_KEYS.REGISTRATIONS, JSON.stringify(updated));
 
     // Async sync in background to Google Sheets if App Settings has a GAS Link
     const settings = await this.getSettings();
@@ -503,7 +504,7 @@ export const dbService = {
   },
 
   getLocalRegistrations(): Registration[] {
-    const raw = localStorage.getItem(LS_KEYS.REGISTRATIONS);
+    const raw = safeStorage.getItem(LS_KEYS.REGISTRATIONS);
     if (raw) {
       try {
         const list = JSON.parse(raw) as Registration[];
@@ -565,7 +566,7 @@ export const dbService = {
     }
     const existing = this.getLocalRegistrations();
     const updated = existing.filter((docSnap) => docSnap.id !== id);
-    localStorage.setItem(LS_KEYS.REGISTRATIONS, JSON.stringify(updated));
+    safeStorage.setItem(LS_KEYS.REGISTRATIONS, JSON.stringify(updated));
   },
 
   // ATTENDANCE
@@ -584,7 +585,7 @@ export const dbService = {
     // Cache locally
     const existing = this.getLocalAttendance();
     const updated = [att, ...existing.filter((item) => item.id !== att.id)];
-    localStorage.setItem(LS_KEYS.ATTENDANCE, JSON.stringify(updated));
+    safeStorage.setItem(LS_KEYS.ATTENDANCE, JSON.stringify(updated));
 
     // Dynamic external syncing
     const settings = await this.getSettings();
@@ -594,7 +595,7 @@ export const dbService = {
   },
 
   getLocalAttendance(): Attendance[] {
-    const raw = localStorage.getItem(LS_KEYS.ATTENDANCE);
+    const raw = safeStorage.getItem(LS_KEYS.ATTENDANCE);
     if (raw) {
       try {
         const list = JSON.parse(raw) as Attendance[];
@@ -656,7 +657,7 @@ export const dbService = {
     }
     const existing = this.getLocalAttendance();
     const updated = existing.filter((docSnap) => docSnap.id !== id);
-    localStorage.setItem(LS_KEYS.ATTENDANCE, JSON.stringify(updated));
+    safeStorage.setItem(LS_KEYS.ATTENDANCE, JSON.stringify(updated));
   },
 
   async clearAllData(): Promise<void> {
@@ -675,14 +676,14 @@ export const dbService = {
     };
 
     // 1. Wipe local cache/storage
-    localStorage.removeItem(LS_KEYS.REGISTRATIONS);
-    localStorage.removeItem(LS_KEYS.ATTENDANCE);
-    localStorage.setItem(LS_KEYS.SETTINGS, JSON.stringify(resetSettings));
-    localStorage.setItem("bimtek_events_list", JSON.stringify([{ ...resetSettings, id: "default" }]));
+    safeStorage.removeItem(LS_KEYS.REGISTRATIONS);
+    safeStorage.removeItem(LS_KEYS.ATTENDANCE);
+    safeStorage.setItem(LS_KEYS.SETTINGS, JSON.stringify(resetSettings));
+    safeStorage.setItem("bimtek_events_list", JSON.stringify([{ ...resetSettings, id: "default" }]));
 
     // Reset quota cache status to automatically allow full online recovery
     isQuotaExceededCached = false;
-    localStorage.removeItem("firestore_quota_exceeded");
+    safeStorage.removeItem("firestore_quota_exceeded");
 
     // 2. Clear Firebase Firestore collections if configured (bypass isFirestoreActive limit so deletions can clean cloud database)
     if (isFirebaseConfigured && db) {
@@ -755,7 +756,7 @@ export const dbService = {
   },
 
   getLocalBimtekEvents(): AppSettings[] {
-    const raw = localStorage.getItem("bimtek_events_list");
+    const raw = safeStorage.getItem("bimtek_events_list");
     if (raw) {
       try {
         return JSON.parse(raw);
@@ -764,7 +765,7 @@ export const dbService = {
       }
     }
     const initialList = [{ ...DEFAULT_SETTINGS, id: "default" }];
-    localStorage.setItem("bimtek_events_list", JSON.stringify(initialList));
+    safeStorage.setItem("bimtek_events_list", JSON.stringify(initialList));
     return initialList;
   },
 
@@ -785,7 +786,7 @@ export const dbService = {
       } else {
         list.push(event);
       }
-      localStorage.setItem("bimtek_events_list", JSON.stringify(list));
+      safeStorage.setItem("bimtek_events_list", JSON.stringify(list));
     }
   },
 
@@ -812,7 +813,7 @@ export const dbService = {
       try {
         // Reset quota exceed cache to attempt connection and let user see fresh online state
         isQuotaExceededCached = false;
-        localStorage.removeItem("firestore_quota_exceeded");
+        safeStorage.removeItem("firestore_quota_exceeded");
 
         // Delete the event document
         await deleteDoc(doc(db, "settings", id));
@@ -843,27 +844,27 @@ export const dbService = {
 
     // 3. Clear from localStorage
     const filteredList = list.filter((item) => item.id !== id);
-    localStorage.setItem("bimtek_events_list", JSON.stringify(filteredList));
+    safeStorage.setItem("bimtek_events_list", JSON.stringify(filteredList));
 
     // Clean up local registrations
-    const rawRegs = localStorage.getItem(LS_KEYS.REGISTRATIONS);
+    const rawRegs = safeStorage.getItem(LS_KEYS.REGISTRATIONS);
     if (rawRegs) {
       try {
         const regs = JSON.parse(rawRegs) as any[];
         const filteredRegs = regs.filter((r) => r.bimtekId !== id && (!eventTitle || r.bimtekTitle !== eventTitle));
-        localStorage.setItem(LS_KEYS.REGISTRATIONS, JSON.stringify(filteredRegs));
+        safeStorage.setItem(LS_KEYS.REGISTRATIONS, JSON.stringify(filteredRegs));
       } catch (e) {
         console.error("Error cleaning local registrations:", e);
       }
     }
 
     // Clean up local attendance
-    const rawAtts = localStorage.getItem(LS_KEYS.ATTENDANCE);
+    const rawAtts = safeStorage.getItem(LS_KEYS.ATTENDANCE);
     if (rawAtts) {
       try {
         const atts = JSON.parse(rawAtts) as any[];
         const filteredAtts = atts.filter((a) => a.bimtekId !== id && (!eventTitle || a.bimtekTitle !== eventTitle));
-        localStorage.setItem(LS_KEYS.ATTENDANCE, JSON.stringify(filteredAtts));
+        safeStorage.setItem(LS_KEYS.ATTENDANCE, JSON.stringify(filteredAtts));
       } catch (e) {
         console.error("Error cleaning local attendance:", e);
       }

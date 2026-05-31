@@ -25,6 +25,7 @@ import {
 } from "lucide-react";
 import { Registration, Attendance, AppSettings, ActiveTab } from "./types";
 import { dbService, getFirestoreQuotaExceeded, forceSetOfflineMode } from "./services/dbService";
+import { safeStorage } from "./utils/safeStorage";
 import { KtpUploader } from "./components/KtpUploader";
 import { ParticipantCard } from "./components/ParticipantCard";
 import { AttendanceForm } from "./components/AttendanceForm";
@@ -63,7 +64,9 @@ export default function App() {
   
   const [activeTab, setActiveTab] = useState<ActiveTab>("home");
   const [pendingTabChange, setPendingTabChange] = useState<ActiveTab | null>(null);
-  const [isAdminAuthorized, setIsAdminAuthorized] = useState(false);
+  const [isAdminAuthorized, setIsAdminAuthorized] = useState(() => {
+    return safeStorage.getItem("admin_authorized_v2") === "true";
+  });
   const [activeAdminTab, setActiveAdminTab] = useState<"stats" | "registrants" | "attendance" | "settings" | "allowance" | "certificates">("stats");
 
   const handleTabChange = (tab: ActiveTab) => {
@@ -1345,7 +1348,14 @@ export default function App() {
                     activeAdminTab={activeAdminTab}
                     setActiveAdminTab={setActiveAdminTab}
                     isAuthorizedOuter={isAdminAuthorized}
-                    onAuthorizedChange={setIsAdminAuthorized}
+                    onAuthorizedChange={(auth) => {
+                      setIsAdminAuthorized(auth);
+                      if (auth) {
+                        safeStorage.setItem("admin_authorized_v2", "true");
+                      } else {
+                        safeStorage.removeItem("admin_authorized_v2");
+                      }
+                    }}
                   />
                 )}
               </motion.div>

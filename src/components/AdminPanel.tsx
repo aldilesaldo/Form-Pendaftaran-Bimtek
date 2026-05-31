@@ -30,6 +30,7 @@ import { ParticipantCard } from "./ParticipantCard";
 import { BarcodeGenerator } from "./BarcodeGenerator";
 import { motion, AnimatePresence } from "motion/react";
 import { dbService } from "../services/dbService";
+import { safeStorage } from "../utils/safeStorage";
 import { generateCertificateImage } from "../utils/certHelper";
 
 interface AdminPanelProps {
@@ -281,7 +282,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
   onAuthorizedChange,
 }) => {
   const [password, setPassword] = useState("");
-  const [isAuthorizedLocal, setIsAuthorizedLocal] = useState(false);
+  const [isAuthorizedLocal, setIsAuthorizedLocal] = useState(() => safeStorage.getItem("admin_authorized_v2") === "true");
   const isAuthorized = isAuthorizedOuter !== undefined ? isAuthorizedOuter : isAuthorizedLocal;
   const setIsAuthorized = (auth: boolean) => {
     setIsAuthorizedLocal(auth);
@@ -323,6 +324,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
   const [kepalaBidangNip, setKepalaBidangNip] = useState(settings.kepalaBidangNip || "");
   const [allowanceAmount, setAllowanceAmount] = useState<number | "">(settings.allowanceAmount !== undefined && settings.allowanceAmount !== 0 ? settings.allowanceAmount : "");
   const [targetParticipants, setTargetParticipants] = useState(settings.targetParticipants !== undefined ? settings.targetParticipants : 50);
+  const [adminPasswordSetting, setAdminPasswordSetting] = useState(settings.adminPassword || "minangrancak");
   const [isDragging, setIsDragging] = useState(false);
   const [isDraggingGlobalCert, setIsDraggingGlobalCert] = useState(false);
   const [templateUploadError, setTemplateUploadError] = useState("");
@@ -555,6 +557,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
       setKepalaBidangNip(settings.kepalaBidangNip || "");
       setAllowanceAmount(settings.allowanceAmount !== undefined && settings.allowanceAmount !== 0 ? settings.allowanceAmount : "");
       setTargetParticipants(settings.targetParticipants !== undefined ? settings.targetParticipants : 50);
+      setAdminPasswordSetting(settings.adminPassword || "minangrancak");
       
       // Update custom layout variables
       setCertNoX(settings.certNoX !== undefined ? settings.certNoX : 960);
@@ -604,7 +607,8 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
     settings.certQrX,
     settings.certQrY,
     settings.certQrSize,
-    settings.isCertQrEnabled
+    settings.isCertQrEnabled,
+    settings.adminPassword
   ]);
 
   const handleActivateEvent = async (event: AppSettings) => {
@@ -822,8 +826,10 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
 
   const handleLogin = (e: React.FormEvent) => {
     e.preventDefault();
-    if (password === "minangrancak") {
+    const correctPassword = settings.adminPassword || "minangrancak";
+    if (password === correctPassword) {
       setIsAuthorized(true);
+      safeStorage.setItem("admin_authorized_v2", "true");
       setAuthError("");
     } else {
       setAuthError("Sandi Salah! Silakan hubungi koordinator pelaksana.");
@@ -847,6 +853,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
         kepalaBidangNip,
         allowanceAmount: allowanceAmount === "" ? 0 : allowanceAmount,
         targetParticipants: targetParticipants === "" ? 0 : targetParticipants,
+        adminPassword: adminPasswordSetting || "minangrancak",
       });
       setSaveStatus("Pengaturan Berhasil Disimpan!");
       setTimeout(() => setSaveStatus(""), 3000);
@@ -3366,6 +3373,24 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
                     </p>
                   </div>
 
+                  {/* Custom Admin Password */}
+                  <div className="space-y-2 border-t border-white/5 pt-4">
+                    <label className="text-xs font-bold text-slate-300 uppercase tracking-wider block">
+                      🔑 Kata Sandi Utama Admin (Custom Password)
+                    </label>
+                    <input
+                      type="text"
+                      value={adminPasswordSetting}
+                      onChange={(e) => setAdminPasswordSetting(e.target.value)}
+                      placeholder="Masukkan sandi custom..."
+                      className="w-full px-4 py-3 rounded-xl bg-slate-800 border border-white/10 text-white focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 text-sm font-semibold"
+                      required
+                    />
+                    <p className="text-[11px] text-slate-400 font-semibold leading-relaxed">
+                      Sandi ini digunakan oleh Anda dan jajaran panitia untuk mengakses Panel Admin. Kata sandi bawaan default adalah <strong className="text-amber-400 font-bold">minangrancak</strong>.
+                    </p>
+                  </div>
+
                   {/* Upload Sandi / Background Template Kartu */}
                   <div className="space-y-3 pt-2">
                     <label className="text-xs font-bold text-slate-300 uppercase tracking-wider block">
@@ -4094,6 +4119,8 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
                 type="button"
                 onClick={() => {
                   setShowExitConfirm(false);
+                  setIsAuthorized(false);
+                  safeStorage.removeItem("admin_authorized_v2");
                   onClose();
                 }}
                 className="flex-1 py-3 bg-red-600 hover:bg-red-500 text-white font-bold rounded-xl shadow-md text-sm active:scale-95 transition-all outline-none cursor-pointer"

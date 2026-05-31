@@ -63,6 +63,7 @@ export interface AppSettings {
   certQrY?: number;
   certQrSize?: number;
   isCertQrEnabled?: boolean;
+  adminPassword?: string;
 }
 
 export type ActiveTab = "home" | "register" | "card" | "absent" | "admin";
