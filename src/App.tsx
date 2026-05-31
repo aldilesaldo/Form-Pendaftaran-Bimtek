@@ -993,7 +993,14 @@ export default function App() {
                           
                           <KtpUploader
                             onScanComplete={handleKtpScanned}
-                            onError={(msg) => setGlobalError(msg)}
+                            onError={(msg) => {
+                              setGlobalError(msg);
+                              setFormNik("");
+                              setFormName("");
+                              setFormAddress("");
+                              setFormKabKota("");
+                              setFormKtp("");
+                            }}
                           />
                         </div>
                       </div>
