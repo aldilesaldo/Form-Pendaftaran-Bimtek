@@ -181,17 +181,20 @@ export const generateCertificateImage = (data: CertificateData): Promise<string>
         if (hostname.endsWith(".run.app")) {
           const parts = hostname.split(".");
           const firstPart = parts[0];
-          let hash = firstPart;
           
-          if (firstPart.startsWith("3000-")) {
-            hash = firstPart.substring(5);
-          } else if (firstPart.startsWith("ais-dev-")) {
-            hash = firstPart.substring(8);
-          } else if (firstPart.startsWith("ais-pre-")) {
-            hash = firstPart.substring(8);
+          // Only map to pre-prod preview if it's an AI Studio environment
+          if (firstPart.startsWith("3000-") || firstPart.startsWith("ais-dev-") || firstPart.startsWith("ais-pre-")) {
+            let hash = firstPart;
+            if (firstPart.startsWith("3000-")) {
+              hash = firstPart.substring(5);
+            } else if (firstPart.startsWith("ais-dev-")) {
+              hash = firstPart.substring(8);
+            } else if (firstPart.startsWith("ais-pre-")) {
+              hash = firstPart.substring(8);
+            }
+            const remainingDomain = parts.slice(1).join(".");
+            baseOrigin = `https://ais-pre-${hash}.${remainingDomain}`;
           }
-          const remainingDomain = parts.slice(1).join(".");
-          baseOrigin = `https://ais-pre-${hash}.${remainingDomain}`;
         }
         
         const verificationLink = `${baseOrigin}?verifyCert=${data.participantId || data.participantNik}`;

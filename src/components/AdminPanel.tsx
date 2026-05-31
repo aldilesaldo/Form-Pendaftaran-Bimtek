@@ -1404,16 +1404,32 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
           {/* PRINTABLE DOKUMEN CONTAINER FOR PDF GENERATION */}
           <div id="print-content-area" className="bg-white text-black font-sans max-w-4xl mx-auto p-4 md:p-8 print:p-0">
             {/* Header */}
-            <div className="border-b-4 border-double border-black pb-4 text-center mb-6">
-              <h1 className="text-xs sm:text-sm font-bold tracking-wide uppercase text-black">
-                Pemerintah Provinsi Sumatera Barat
-              </h1>
-              <h2 className="text-base sm:text-lg font-extrabold tracking-wider uppercase text-black mt-0.5">
-                Dinas Pemberdayaan Perempuan, Perlindungan Anak, Pengendalian Penduduk, dan Keluarga Berencana (DP3AP2KB)
-              </h2>
-              <p className="text-[10px] sm:text-xs font-semibold text-black mt-1">
-                Jl. Rasuna Said no.74 Padang - Sumatera Barat
-              </p>
+            <div className="border-b-4 border-double border-black pb-4 mb-6 flex items-center justify-between gap-4">
+              {/* Logo Kiri */}
+              <div className="flex-shrink-0">
+                <img
+                  src="https://upload.wikimedia.org/wikipedia/commons/thumb/e/e0/Coat_of_arms_of_West_Sumatra.svg/100px-Coat_of_arms_of_West_Sumatra.svg.png"
+                  alt="Logo Pemprov Sumbar"
+                  className="w-14 h-16 object-contain"
+                  referrerPolicy="no-referrer"
+                />
+              </div>
+              
+              {/* Teks Tengah */}
+              <div className="flex-grow text-center">
+                <h1 className="text-xs sm:text-sm font-bold tracking-wide uppercase text-black">
+                  Pemerintah Provinsi Sumatera Barat
+                </h1>
+                <h2 className="text-sm sm:text-base font-extrabold tracking-wider uppercase text-black mt-0.5 leading-tight">
+                  Dinas Pemberdayaan Perempuan, Perlindungan Anak, Pengendalian Penduduk, dan Keluarga Berencana (DP3AP2KB)
+                </h2>
+                <p className="text-[10px] sm:text-xs font-semibold text-black mt-1">
+                  Jl. Rasuna Said no.74 Padang - Sumatera Barat
+                </p>
+              </div>
+
+              {/* Spacer Kanan agar Teks tetap seimbang di Tengah (sama ukurannya dengan logo di kiri) */}
+              <div className="w-14 h-16 flex-shrink-0 invisible sm:block"></div>
             </div>
 
             {printType === "single-card" && selectedParticipantForCard ? (

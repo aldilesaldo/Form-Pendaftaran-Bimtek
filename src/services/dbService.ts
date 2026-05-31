@@ -324,7 +324,7 @@ export const dbService = {
           colSnap.forEach((docSnap) => {
             data.push(docSnap.data() as Registration);
           });
-          const sorted = data.sort((a, b) => new Date(b.registeredAt).getTime() - new Date(a.registeredAt).getTime());
+          const sorted = data.sort((a, b) => new Date(a.registeredAt).getTime() - new Date(b.registeredAt).getTime());
           
           // Sync live data to local cache to ensure exact consistency (important for deleted records)
           safeStorage.setItem(LS_KEYS.REGISTRATIONS, JSON.stringify(sorted));
@@ -542,7 +542,7 @@ export const dbService = {
             uniqueData.push(item);
           }
         });
-        return uniqueData.sort((a, b) => new Date(b.registeredAt).getTime() - new Date(a.registeredAt).getTime());
+        return uniqueData.sort((a, b) => new Date(a.registeredAt).getTime() - new Date(b.registeredAt).getTime());
       } catch (error) {
         try {
           return handleFirestoreError(error, OperationType.LIST, path);
