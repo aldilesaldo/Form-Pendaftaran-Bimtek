@@ -3373,23 +3373,6 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
                     </p>
                   </div>
 
-                  {/* Custom Admin Password */}
-                  <div className="space-y-2 border-t border-white/5 pt-4">
-                    <label className="text-xs font-bold text-slate-300 uppercase tracking-wider block">
-                      🔑 Kata Sandi Utama Admin (Custom Password)
-                    </label>
-                    <input
-                      type="text"
-                      value={adminPasswordSetting}
-                      onChange={(e) => setAdminPasswordSetting(e.target.value)}
-                      placeholder="Masukkan sandi custom..."
-                      className="w-full px-4 py-3 rounded-xl bg-slate-800 border border-white/10 text-white focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 text-sm font-semibold"
-                      required
-                    />
-                    <p className="text-[11px] text-slate-400 font-semibold leading-relaxed">
-                      Sandi ini digunakan oleh Anda dan jajaran panitia untuk mengakses Panel Admin. Kata sandi bawaan default adalah <strong className="text-amber-400 font-bold">minangrancak</strong>.
-                    </p>
-                  </div>
 
                   {/* Upload Sandi / Background Template Kartu */}
                   <div className="space-y-3 pt-2">
